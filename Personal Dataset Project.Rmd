@@ -1,0 +1,243 @@
+---
+title: "Personal Dataset Project"
+author: "Hannah"
+date: "4/17/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+```
+
+## Week 7
+
+What were the most commonly recalled types of food between 2017-2020?
+What were the most common reasons foods were recalled?
+Was a particular category of food more likely to be recalled? Are conventional or organic foods more likely to be recalled?
+
+## Week 9
+
+### (B) Write a brief paragraph describing why you decided on this data source, where the data comes from originally, how the chosen data will help you answer a question you are interested in (not necessarily one of the questions you wrote about in Week \#7 but hopefully something related), and any processing steps you applied to the data. Submit the paragraph as a response to this question - you do not have to post this to github. 
+
+The data is from the FDA website. They have posted a description of all the recalled food and drug items in the US between 2017-2020. It is an open data source with over a thousand entries. I removed all of the entries related to drugs, cosmetics, medical devices, etc. by narrowing the Type column to Food. I hope to answer questions such as: what is the most common reason food is recalled and are there certain types of foods which are more likely to be recalled? 
+
+Processing steps:
+
+```{r loaddata}
+#upload csv as a data frame
+
+recalls <- read.csv("recalls.csv")
+head(recalls)
+
+```
+
+```{r processing}
+
+#date column data type
+
+recalls$Date <- as.Date(recalls$Date)
+
+#separate elements of Product.Types column
+
+types <- str_split(recalls$Product.Types,",")
+recalls$Category <- sapply(types,"[",1)
+
+recalls <- recalls[recalls$Category == "Food & Beverages",]
+
+types <- str_split(recalls$Product.Types,",")
+recalls$Food.Sub <- sapply(types,tail,1)
+
+recalls$Food.Sub <- str_trim(recalls$Food.Sub)
+
+#replace Food & Beverage Safety
+
+recalls$Food.Sub[recalls$Food.Sub == "Food & Beverage Safety"] <- ""
+recalls$Food.Sub[recalls$Food.Sub == "Allergens"] <- ""
+recalls$Food.Sub[recalls$Food.Sub == "Food & Beverages"] <- ""
+recalls$Food.Sub[recalls$Food.Sub == "Foodborne Illness"] <- ""
+
+head(recalls)
+
+write.csv(recalls, "recalls_clean.csv", row.names = FALSE)
+```
+
+## Week 11
+
+```{r cleaning continued}
+rc <- read.csv("recalls_clean.csv")
+
+#there are multiple csv files because I worked on this project over the course of several weeks. 
+
+rc$Recall.Reason.Description <- str_to_title(rc$Recall.Reason.Description)
+head(rc)
+
+#string data cleaning
+
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Undeclared Peanut"] <- "Undeclared Peanuts"
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Undeclared Almond"] <- "Undeclared Almonds"
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Potential To Be Contaminated With Listeria Monocytogenes"] <- "Potential To Be Contaminated With Listeria"
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Listeria Monocytogenes"] <- "Listeria"
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Allergen - Eggs"] <- "Allergen: Eggs"
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Allergen: Egg"] <- "Allergen: Eggs"
+rc$Recall.Reason.Description[rc$Recall.Reason.Description=="Undeclared Egg"] <- "Undeclared Eggs"
+
+write.csv(rc, "rc.csv", row.names = FALSE)
+```
+
+```{r reason df}
+
+#create new data frame to splice out "Recall Reason Description" string values that commonly appear. 
+
+reason <- data.frame(table(rc$Recall.Reason.Description))
+ names(reason)[names(reason) == "Var1"] <- "Reason.Description"
+head(reason)
+reason[reason$Freq >10,]
+
+#create new object only with the string values of interest (common "Recall Reason Description" values)
+
+reason2 <- rc[
+  rc$Recall.Reason.Description == "Undeclared Milk" |
+  rc$Recall.Reason.Description == "Listeria" |  
+  rc$Recall.Reason.Description == "Potential To Be Contaminated With Listeria" |
+  rc$Recall.Reason.Description == "Undeclared Eggs" |
+  rc$Recall.Reason.Description == "Salmonella" |
+  rc$Recall.Reason.Description == "Undeclared Peanuts" |
+  rc$Recall.Reason.Description == "Potential To Be Contaminated With Salmonella" |
+  rc$Recall.Reason.Description == "Undeclared Sulfites" |
+  rc$Recall.Reason.Description == "Undeclared Almonds" |
+  rc$Recall.Reason.Description == "Undeclared Soy"
+    ,]
+
+head(reason2)
+```
+
+```{r reason2 plot}
+
+#create a visualization showing the frequencies of the most common "Recall Reason Descriptions"
+
+ggplot(reason2, aes(x=Recall.Reason.Description, color=Recall.Reason.Description)) +
+  geom_bar() +
+  xlab("Reason") + ylab("Occurances") +
+  ggtitle("Common Reasons for Recalled Food") +
+  coord_flip() +
+  theme(legend.position = "none")
+```
+
+## Upload to githut
+```{r save plot}
+
+##export plot to upload to github
+
+png("recall.reasons.png")
+recall.reasons <- ggplot(reason2, aes(x=Recall.Reason.Description, color=Recall.Reason.Description)) +
+  geom_bar() +
+  xlab("Reason") + ylab("Occurances") +
+  ggtitle("Common Reasons for Recalled Food") +
+  coord_flip() +
+  theme(legend.position = "none")
+print(recall.reasons)
+```
+
+## EDA
+```{r EDA}
+
+recall.category <- data.frame(table(reason2$Recall.Reason.Description, reason2$Food.Sub))
+  names(recall.category)[names(recall.category) == "Var1"] <- "Reason.Description"
+  names(recall.category)[names(recall.category) == "Var2"] <- "Food.Subcategory"
+  recall.category[recall.category$Freq>5,]
+```
+
+## EDA Reasoning
+Data frame created from a contingency table to show the most common associations between recall reason and food group category. For example undeclared milk is frequently associated with processed convenience foods including: bakery products, chocolate products and snack food items. Also seen in this table is that the underlying dataset is not as clean as I would like it to be. "Food-borne Illness" is not a category of food but for some reason it is showing up in that column. There are also a bunch of entries which don't have anything listed in the Food.Subcategory column because nothing was listed in the original dataset. 
+
+## create contingency table visualization to export
+## create food.sub visualizations of most common
+```{r foodsub df}
+
+#create new data frame to splice out Food Subcategory string values that commonly appear. 
+
+foodsub <- data.frame(table(rc$Food.Sub))
+ names(foodsub)[names(reason) == "Var1"] <- "Food Subcategory"
+head(foodsub)
+foodsub[foodsub$Freq >10,]
+
+#create new object only with the string values of interest (common Food Subcategory values)
+
+
+foodsub2 <- rc[
+  rc$Food.Sub == "Bakery Product/Mix" |
+  rc$Food.Sub == "Chocolate/Cocoa Product" |  
+  rc$Food.Sub == "Cheese/Cheese Product" |
+  rc$Food.Sub == "Fruit/Fruit Product" |
+  rc$Food.Sub == "Flavors &  Salts" |
+  rc$Food.Sub == "Fish" |
+  rc$Food.Sub == "Ice Cream/Frozen Dairy" |
+  rc$Food.Sub == "Gravy/Sauces" |
+  rc$Food.Sub == "Snack Food Item" |
+  rc$Food.Sub == "Produce" |
+  rc$Food.Sub == "Prepared Food" |
+  rc$Food.Sub == "Meal Replacements" |
+  rc$Food.Sub == "Milk/Milk Product"
+    ,]
+
+head(foodsub2)
+```
+
+```{r foodsub2 plot}
+
+#create a visualization showing the frequencies of the most common Food Subcategories
+
+ggplot(foodsub2, aes(x=Food.Sub, color=Food.Sub)) +
+  geom_bar() +
+  xlab("Food Subcategory") + ylab("Occurances") +
+  ggtitle("Common Food Categories of Recalled Food") +
+  coord_flip() +
+  theme(legend.position = "none")
+```
+
+```{r save plot2}
+
+##export plot to upload to github
+
+png("foodsub.plot.png")
+foodsub.plot <- ggplot(foodsub2, aes(x=Food.Sub, color=Food.Sub)) +
+  geom_bar() +
+  xlab("Food Subcategory") + ylab("Occurances") +
+  ggtitle("Common Food Categories of Recalled Food") +
+  coord_flip() +
+  theme(legend.position = "none")
+print(foodsub.plot)
+```
+
+```{r interestingreasons}
+
+unique(rc$Recall.Reason.Description, incomparables = FALSE)
+
+"Presence Of Small Pieces Of Plastic"  
+"May Be Contaminated With Rodent Droppings"
+"Misbranding & Unapproved New Drugs"
+"Unsafe Levels Of Arsenic And Lead"                                                                                          
+"Foreign Object"                                                                                                             
+"Potential To Be Contaminated With Hepatitis A"                                                                              
+"Potential Presence Of Plastic And Metal"
+
+#Use excel to create table
+
+```
+
+```{r brand df}
+
+#create new data frame to splice out Brand Name string values that commonly appear. 
+
+brand <- data.frame(table(rc$Brand.Names))
+ names(brand)[names(brand) == "Var1"] <- "Brand.Names"
+head(brand)
+brand[brand$Freq >4,]
+
+#use excel to create table
+
+```
+
+```
