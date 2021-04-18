@@ -2,7 +2,7 @@
 Data 115 personal dataset project
 
 ## Motivation
-This semester, outside of DATA 115, I am also taking a class on the fundamentals of cooking. We frequently talk about foodborne illnesses. This topic motivated me to begin looking into related datasets. I didn’t need to look very far to find the list of all food and drug recalls made by the FDA over the past few years. I wanted to find out what types of categorizations and generalizations could be made to recalled foods. Some of my initial questions included: “What are the most common reasons for food recalls?”, “What are the most common categories of recalled foods?” and “Are certain recall reasons associated with certain categories of recalled foods?”. 
+This semester, outside of DATA 115, I am also taking a class on the fundamentals of cooking. We frequently talk about foodborne illnesses. This topic motivated me to begin looking into related datasets. I didn’t need to look very far to find the list of all food and drug recalls made by the FDA over the past few years. I wanted to find out what types of categorizations and generalizations could be made about recalled foods. Some of my initial questions included: “What are the most common reasons for food recalls?”, “What are the most common categories of recalled foods?” and “Are certain recall reasons associated with certain categories of recalled foods?”. 
 
 ## Data Source
 I obtained the Data from the U.S. Food and Drug Administration website. They have posted a description of all the recalled food and drug items in the US between 2017-2020. It is an open data source with over a thousand entries. I removed all of the entries related to drugs, cosmetics, medical devices, etc. by narrowing the Type column to Food.
